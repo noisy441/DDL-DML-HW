@@ -1,0 +1,25 @@
+services:
+  mysql:
+    image: mysql:oraclelinux9
+    container_name: mysql-hw
+    ports:
+      - "3306:3306"
+    environment:
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_USER_PASSWORD}
+    volumes:
+      - ./mysql-data:/var/lib/mysql
+      - ./sakila-db-dump:/backup
+    restart: on-failure
+    networks:
+      - mysql-network
+
+networks:
+  mysql-network:
+    driver: bridge
+
+volumes:
+  mysql-data:
+    driver: local

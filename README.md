@@ -33,8 +33,10 @@
 1.6. Переподключитесь к базе данных от имени sys_temp.
 
 Для смены типа аутентификации с sha2 используйте запрос: 
-```sql
+
+```
 ALTER USER 'sys_test'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password';
+
 ```
 1.6. По ссылке https://downloads.mysql.com/docs/sakila-db.zip скачайте дамп базы данных.
 
@@ -44,6 +46,116 @@ ALTER USER 'sys_test'@'localhost' IDENTIFIED WITH mysql_native_password BY 'pass
 
 *Результатом работы должны быть скриншоты обозначенных заданий, а также простыня со всеми запросами.*
 
+---
+
+### Решение 1
+
+Буду использовать контейнер Docker для чего напишу docker-compose.yml и вынесу чувствительные данные в файл .env
+После запуска docker-compose подключаемся к MySQL с помощью команды 
+
+```
+
+docker-compose exec mysql mysql -uroot -p
+
+```
+
+вводим пароль который ранее указали в файле .env и видим приветствие: Welcome to the MySQL monitor.
+
+Создадим пользователя sys_temp,  для этого выполним запрос 
+
+```
+
+CREATE USER 'sys_temp'@'localhost' IDENTIFIED BY 'password';
+
+```
+
+в ответ получим: Query OK, 0 rows affected (0.178 sec). Пользователь создан.
+Теперь выпплним запрос на получение всех пользователей в базе.
+
+```
+
+SELECT user FROM mysql.user;
+
+```
+
+Результатом станет список всех пользователей (на скриншоте)
+
+![список пользователей](https://github.com/noisy441/DDL-DML-HW/blob/main/img/img1.png)
+
+Предоставим пользователю sys_temp все права, для чего выпоним запрос:
+
+```
+
+GRANT ALL PRIVILEGES ON *.* TO 'sys_temp'@'localhost' WITH GRANT OPTION;
+
+```
+
+получим ответ: Query OK, 0 rows affected, 1 warning (0.174 sec) и сразу же применим изменения.
+
+```
+
+FLUSH PRIVILEGES;
+
+```
+
+проверим что пользователю sys_temp действительно предоставлены все права. Для чего выполним запрос:
+
+```
+
+SHOW GRANTS FOR 'sys_temp'@'localhost'; 
+
+```
+
+результат на скриншоте
+
+![права sys_temp](https://github.com/noisy441/DDL-DML-HW/blob/main/img/img2.png)
+
+Теперь выйдем и зайдем под пользователем sys_temp
+
+```
+
+exit
+docker-compose exec mysql mysql -usys_temp -p
+
+```
+
+Выполим запрос из задания 
+
+```
+
+ALTER USER 'sys_temp'@'localhost' IDENTIFIED WITH mysql_native_password BY 'password';
+
+```
+
+что изменит пользователя и явно укажет метод аутентификации и пароль. Далее скачиваем дамп базы и восстанавливаем его в текущую базу. Отредактируем docker-compose.yml добавив в него volumes: - ./sakila-db-dump:/backup пробросив папку с дампами внутрь докера.
+Теперь сосдадим базу sakila в кторую будем восстанавливать дамп. 
+
+```
+
+CREATE DATABASE sakila
+
+```
+
+Далее выходим и открываем bash в docker и выполняем следующие команды:
+
+```
+
+docker exec -it mysql-hw bash
+mysql -usys_temp -ppassword  < /backup/sakila-data.sql
+mysql -usys_temp -ppassword  < /backup/sakila-schema.sql 
+
+```
+Проверяем что дамп восстановился как следует командой
+
+```
+USE sakila
+SHOW TABLES;
+
+```
+![таблицы базы sakila](https://github.com/noisy441/DDL-DML-HW/blob/main/img/img3.png)
+
+
+---
 
 ### Задание 2
 Составьте таблицу, используя любой текстовый редактор или Excel, в которой должно быть два столбца: в первом должны быть названия таблиц восстановленной базы, во втором названия первичных ключей этих таблиц. Пример: (скриншот/текст)
@@ -51,7 +163,13 @@ ALTER USER 'sys_test'@'localhost' IDENTIFIED WITH mysql_native_password BY 'pass
 Название таблицы | Название первичного ключа
 customer         | customer_id
 ```
+---
 
+### Решение 2
+
+![таблицы базы sakila](https://github.com/noisy441/DDL-DML-HW/blob/main/img/img4.png)
+
+---
 
 ## Дополнительные задания (со звёздочкой*)
 Эти задания дополнительные, то есть не обязательные к выполнению, и никак не повлияют на получение вами зачёта по этому домашнему заданию. Вы можете их выполнить, если хотите глубже шире разобраться в материале.
@@ -62,3 +180,21 @@ customer         | customer_id
 3.2. Выполните запрос на получение списка прав для пользователя sys_temp. (скриншот)
 
 *Результатом работы должны быть скриншоты обозначенных заданий, а также простыня со всеми запросами.*
+
+---
+
+### Решение 3*
+
+ Уберем у пользователя sys_temp права
+
+ ```
+
+ REVOKE INSERT, UPDATE, DELETE ON sakila.* FROM 'sys_temp'@'localhost';
+ FLUSH PRIVILEGES;
+ SHOW GRANTS FOR 'sys_temp'@'localhost';
+ 
+ ```
+
+![права](https://github.com/noisy441/DDL-DML-HW/blob/main/img/img5.png)
+
+---
